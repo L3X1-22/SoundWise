@@ -30,18 +30,32 @@ def jsonSongCreator(song):
             
     
 
-def searchNameAndArtist():
-    with io.open('json_files/song.json', 'r') as f:
-        data = json.load(f)
+def searchNameAndArtist(folder):
 
-        try:
-            artist = data['results'][0]['recordings'][0]['artists'][0]['name']
-            song = data['results'][0]['recordings'][0]['title']
+    with os.scandir(folder) as files:
+        for file in files:
+            with io.open(f'json_files/{file.name}.json', 'r') as f:
+                data = json.load(f)
+                
 
-        except IndexError:
-            print('ni pedo carnal, no existe esta canción jaja salu3')
-            artist = None
-            song = None
+                try:
+                    artist = data['results'][0]['recordings'][0]['artists'][0]['name']
+                    song = data['results'][0]['recordings'][0]['title']
+                    print(f'file:{file.name},\n artist:{artist},\n song:{song}\n')
+
+                except IndexError:
+                    print('canción sin nombre')
+                    artist = None
+                    song = None
+
+                except KeyError:
+                    print('canción sin nombre')
+                    artist = None
+                    song = None
+                except FileNotFoundError:
+                    print('no existe el json')
+                    artist = None
+                    song = None
 
     print(artist, song)
     return artist, song
@@ -53,14 +67,7 @@ def searchSongs(folder):
             songs.append(fichero.name)
 
     return True
-    
-
-#jsonSongCreator()
-#searchNameAndArtist()
-searchSongs('../Music')
-print(songs.index('Borgeous  David Solano   Big Bang (2015 Life In Color Anthem) .mp3'))
-jsonSongCreator(songs)
-print(excepted_songs)
+searchNameAndArtist('../Music')
 
 '''
 metadata = audio_metadata.load(test_song)
