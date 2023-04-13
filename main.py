@@ -2,10 +2,18 @@ import os
 import audio_metadata
 import acoustid
 
-fp = acoustid.fingerprint_file('(PARTY MIX) - DJ BL3ND - from YouTube.mp3')
-print(fp)
+test_song = './XXXTENTACION  BAD (Official Music Video).mp3'
+apikey = 'qCWpG7ls5x'
+json_md = os.open("./json_files/song.json", "w")
+
+fp = acoustid.fingerprint_file(test_song)
+
+
+
+json_md.write(acoustid.lookup(apikey, fp[1], fp[0]))
+
 '''
-metadata = audio_metadata.load('(PARTY MIX) - DJ BL3ND - from YouTube.mp3')
+metadata = audio_metadata.load(test_song)
 metadata['title'] = 'DJ BL3ND'
 del metadata['title']
 print(metadata)
