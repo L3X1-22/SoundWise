@@ -1,8 +1,9 @@
-import json
+import acoustid
 import os
 import io
+import json
 import audio_metadata
-import acoustid
+
 
 
 class Song_sorter:
@@ -12,72 +13,71 @@ class Song_sorter:
         self.songs = songs
         self.excepted_songs = excepted_songs
 
-    def searchSongs(self, folder):
-        with os.scandir(folder) as ficheros:
+    #this function search the songs in a folder and add them to a list
+    def searchSongs(self):
+        with os.scandir(self.folder) as ficheros:
             for fichero in ficheros:
-                self.append(fichero.name)
+                self.songs.append(fichero.name)
+        return self.songs
 
+    #this function creates JSON files for all the songs on "songs" list
     def jsonSongCreator(self, song):
-        for i in song:
+        try:
+            fp = acoustid.fingerprint_file(f'{self.folder}/{song}')
+            songJson = io.open(f'json_files/{song}.json', 'r')
+            songJson.write(json.dumps(acoustid.lookup(self.apikey, fp[1], fp[0])))
+            songJson.close()
+
+        except io.UnsupportedOperation:
+            print(song)
+        
+        except acoustid.FingerprintGenerationError:
+            self.excepted_songs.append(song)
+
+        except FileNotFoundError:
             try:
-                fp = acoustid.fingerprint_file(f'../Music/{i}')
-                songJson = io.open(f'json_files/{i}.json', 'r')
-                songJson.write(json.dumps(acoustid.lookup(apikey, fp[1], fp[0])))
+                fp = acoustid.fingerprint_file(f'{self.folder}/{song}')
+                songJson = io.open(f'json_files/{song}.json', 'w')
+                songJson.write(json.dumps(acoustid.lookup(self.apikey, fp[1], fp[0])))
                 songJson.close()
-            except io.UnsupportedOperation:
-                print(i)
-
-            except FileNotFoundError:               
-                try:
-                    fp = acoustid.fingerprint_file(f'../Music/{i}')
-                    songJson = io.open(f'json_files/{i}.json', 'w')
-                    songJson.write(json.dumps(acoustid.lookup(apikey, fp[1], fp[0])))
-                    songJson.close()
-
-                except acoustid.FingerprintGenerationError:
-                    self.excepted_songs.append(i)
-
+        
             except acoustid.FingerprintGenerationError:
-                self.excepted_songs.append(i)
+                self.excepted_songs.append(song)
 
-
-
-    def searchNameAndArtist(self, folder):
-
-        with os.scandir(folder) as files:
-            for file in files:
+    #this function search and return the main artist of a song and the name of the song as well
+    def searchNameAndArtist(self, song):
+            try:
+                json_song = io.open(f'json_files/{song}.json', 'r')
+                data = json.load(json_song)
+                
                 try:
-                    json_song = io.open(f'json_files/{file.name}.json', 'r')
-                    data = json.load(json_song)
+                    artist = data['results'][0]['recordings'][0]['artists'][0]['name']
+                    name = data['results'][0]['recordings'][0]['title']
+                    print(f'file:{song},\n artist:{artist},\n song:{name}\n')
+                
+                except IndexError:
+                    print('canción sin nombre')
+                    artist = None
+                    name = None
+                
+                except KeyError:
+                    print('canción sin nombre')
+                    artist = None
+                    name = None
+                
+            except FileNotFoundError:
+                    print('no existe el json')
+                    artist = None
+                    name = None
 
+            return [artist, name]
+        
+    #this functions adds the name and artist of a given song
+    def metadataAdder(self, song):
+        metadata = audio_metadata.load(f'{self.folder}/{song}')
+        info = self.searchNameAndArtist(song)
+        metadata['artist'] = info[0]
+        metadata['title'] = info[1]
+        print(metadata['title'], metadata['artist'])
 
-                    try:
-                        artist = data['results'][0]['recordings'][0]['artists'][0]['name']
-                        song = data['results'][0]['recordings'][0]['title']
-                        print(f'file:{file.name},\n artist:{artist},\n song:{song}\n')
-
-                    except IndexError:
-                        print('canción sin nombre')
-                        artist = None
-                        song = None
-
-                    except KeyError:
-                        print('canción sin nombre')
-                        artist = None
-                        song = None
-
-                except FileNotFoundError:
-                        print('no existe el json')
-                        artist = None
-                        song = None            
-
-        print(artist, song)
-        return artist, song
-
-sorter1 = Song_sorter('qCWpG7ls5x', [], [])
-'''
-metadata = audio_metadata.load(test_song)
-metadata['title'] = 'DJ BL3ND'
-del metadata['title']
-print(metadata)
-'''
+sorter1 = Song_sorter('qCWpG7ls5x', [], [], '../Music')
